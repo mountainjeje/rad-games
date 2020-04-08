@@ -4,7 +4,6 @@ import subprocess
 def checkUser(sender):
 
     userdata = []
-
     dataTree = ET.parse('users.xml')
     dataRoot = dataTree.getroot()
 
@@ -37,12 +36,34 @@ def registerUser(sender):
     print('New user!')
     return ('New user', '1', sender)
 
-def sendMsg(recipient, message, userdata):
+def sendMsg(message, userdata, recipient=0):
+    if not recipient:
+        recipient = userdata[2]
     if(int(userdata[1]) < 2):
         subprocess.check_output("./hilink.sh send_sms \'" + recipient + "\' \'" + message + "\'", shell=True)
         print ('msg sent')
     else:
         print('Not allowed')
+    return
+
+def processMsg(msgcontent, userdata):
+    reply = 'Message processed'
+    if msgcontent.split()[0] in ('rg', 'Rg', 'RG'):
+        writeData('name', msgcontent.split()[1], userdata)
+        sendMsg('Tu es enregistre en tant que : ' + msgcontent.split()[1], userdata)
+    else:
+        reply = 'Unknown command'
+    return reply
+
+def writeData(elmnt, data, userdata):
+    dataTree = ET.parse('users.xml')
+    dataRoot = dataTree.getroot()
+    for element in dataRoot.findall('user'):
+        if(userdata[2] == element.find('phone').text):
+            for subelement in element.iter(elmnt):
+                subelement.text = data
+            break
+    dataTree.write('users.xml')
     return
 
 oldmsgdate = ''
@@ -54,12 +75,11 @@ for message in messageRoot.findall('Messages/Message'):
 
 if (msgdate != oldmsgdate): 
     userdata = checkUser(sender)
-    print(userdata)
-    #we first check if user wants to upgrade to level 1 and receive msgs from rad
-    if not userdata and msgcontent in ('Yo Rad!', 'Yo Rad !'):
+    if userdata:
+        reply = processMsg(msgcontent, userdata)
+        print(reply)
+    elif not userdata and msgcontent in ('Yo Rad!', 'Yo Rad !'):
         userdata = registerUser(sender)
+        sendMsg('Tu peux t enregistrer en envoyant : rg ton_nom', userdata, sender)
     elif not userdata:
         print('Unknown user')
-    print(userdata)
-    #reply = processMsg(msgcontent, userdata)
-    #sendMsg(sender, 'Hello world', userdata)
