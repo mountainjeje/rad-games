@@ -15,27 +15,34 @@ def checkUser(sender):
             userdata.append(sender)
             break
     else:
-        newuser = ET.Element("user")
-        ET.SubElement(newuser, "name")
-        for newname in newuser.iter('name'):
-            newname.text = 'New user'
-        ET.SubElement(newuser, "phone")
-        for number in newuser.iter('phone'):
-            number.text = sender
-        ET.SubElement(newuser, "level")
-        for level in newuser.iter('level'):
-            level.text = "2"
-        dataRoot.append(newuser)
-        dataTree.write('users.xml')
-        print('New user!')
+        userdata = False
     return userdata
+    
+def registerUser(sender):
+    dataTree = ET.parse('users.xml')
+    dataRoot = dataTree.getroot()
+    
+    newuser = ET.Element("user")
+    ET.SubElement(newuser, "name")
+    for name in newuser.iter('name'):
+        name.text = 'New user'
+    ET.SubElement(newuser, "phone")
+    for phone in newuser.iter('phone'):
+        phone.text = sender
+    ET.SubElement(newuser, "level")
+    for level in newuser.iter('level'):
+        level.text = "1"
+    dataRoot.append(newuser)
+    dataTree.write('users.xml')
+    print('New user!')
+    return ('New user', '1', sender)
 
 def sendMsg(recipient, message, userdata):
-    if userdata[1] in {'1', '0'}:
-        #subprocess.check_output("./hilink.sh send_sms \'" + recipient + "\' \'" + message "\'", shell=True)
+    if(int(userdata[1]) < 2):
+        subprocess.check_output("./hilink.sh send_sms \'" + recipient + "\' \'" + message + "\'", shell=True)
         print ('msg sent')
     else:
-        print('not allowed')
+        print('Not allowed')
     return
 
 oldmsgdate = ''
@@ -48,5 +55,11 @@ for message in messageRoot.findall('Messages/Message'):
 if (msgdate != oldmsgdate): 
     userdata = checkUser(sender)
     print(userdata)
+    #we first check if user wants to upgrade to level 1 and receive msgs from rad
+    if not userdata and msgcontent in ('Yo Rad!', 'Yo Rad !'):
+        userdata = registerUser(sender)
+    elif not userdata:
+        print('Unknown user')
+    print(userdata)
     #reply = processMsg(msgcontent, userdata)
-    sendMsg(sender, 'Hello world', userdata)
+    #sendMsg(sender, 'Hello world', userdata)
