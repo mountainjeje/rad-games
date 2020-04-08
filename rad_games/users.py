@@ -1,20 +1,21 @@
 import xml.etree.ElementTree as ET
 import subprocess
 
-def getname(sender):
+def checkUser(sender):
 
-    name = False
+    data = []
 
     dataTree = ET.parse('users.xml')
     dataRoot = dataTree.getroot()
 
     for user in dataRoot.findall('user'):
         if(sender == user.find('phone').text):
-            name = user.find('name').text
+            data.append(user.find('name').text)
+            data.append(user.find('level').text)
+            data.append(sender)
             #subprocess.check_output("./hilink.sh send_sms \'" + sender + "\' \'Salut " + name + "!\'", shell=True)
             break
-
-    if not name:
+    else:
         #subprocess.check_output("./hilink.sh send_sms \'" + sender + "\' \'Salut, tu peux t'enregistrer en renvoyant ton nom\'", shell=True)
         newuser = ET.Element("user")
         ET.SubElement(newuser, "name")
@@ -25,15 +26,21 @@ def getname(sender):
             number.text = sender
         ET.SubElement(newuser, "level")
         for level in newuser.iter('level'):
-            level.text = "1"
+            level.text = "2"
         dataRoot.append(newuser)
         dataTree.write('users.xml')
         print('New user!')
-    return name
+    return data
 
-
+oldmsgdate = ''
 messageRoot = ET.fromstring(subprocess.check_output("./hilink.sh get_sms", shell=True))
 for message in messageRoot.findall('Messages/Message'):
     sender = message.find('Phone').text
-print(sender)
-print(getname(sender))
+    msgcontent = message.find('Content').text
+    msgdate = message.find('Date').text
+
+if (msgdate != oldmsgdate): 
+    data = checkUser(sender)
+    print(data)
+
+
