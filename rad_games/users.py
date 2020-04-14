@@ -60,8 +60,8 @@ def writeData(elmnt, data, userdata):
     dataRoot = dataTree.getroot()
     for element in dataRoot.findall('user'):
         if(userdata[2] == element.find('phone').text):
-            for subelement in element.iter(elmnt):
-                subelement.text = data
+            subelement = element.find(elmnt)
+            subelement.text = data
             break
     dataTree.write('users.xml')
     return
