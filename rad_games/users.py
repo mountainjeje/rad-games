@@ -36,7 +36,7 @@ def registerUser(sender):
     print('New user!')
     return ('New user', '1', sender)
 
-def sendMsg(message, userdata, recipient=0):
+def sendMsg(message, userdata, recipient=0): #if userdata='None' add recipient
     if not recipient:
         recipient = userdata[2]
     if(int(userdata[1]) < 2):
