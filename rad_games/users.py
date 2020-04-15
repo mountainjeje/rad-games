@@ -41,19 +41,29 @@ def sendMsg(message, userdata, recipient=0): #if userdata='None' add recipient
         recipient = userdata[2]
     if(int(userdata[1]) < 2):
         subprocess.check_output("./hilink.sh send_sms \'" + recipient + "\' \'" + message + "\'", shell=True)
-        print ('msg sent')
+        print ('Message sent')
     else:
         print('Not allowed')
     return
 
 def processMsg(msgcontent, userdata):
-    reply = 'Message processed'
-    if msgcontent.split()[0] in ('rg', 'Rg', 'RG'):
+    if msgcontent.split()[0] in ('nom', 'Nom') and len(msgcontent.split())>1:
         writeData('name', msgcontent.split()[1], userdata)
         sendMsg('Tu es enregistre en tant que : ' + msgcontent.split()[1], userdata)
+    elif msgcontent.split()[0] in ('prendre', 'Prendre') and len(msgcontent.split())>1:
+        writeData('game/inventory', msgcontent.split()[1], userdata)
+        sendMsg('L objet ' + msgcontent.split()[1] + ' est dans l inventaire', userdata)
+    elif msgcontent.split()[0] in ('voir', 'Voir') and len(msgcontent.split())>1:
+        if msgcontent.split()[1] in ('inventaire', 'Inventaire'):
+            itemlist = []
+            for items in readData('game/inventory', userdata).split(';'):
+                itemlist.append(items.split(',')) 
+            sendMsg('Inventaire : ' + str(itemlist), userdata)
+            print(itemlist)
     else:
-        reply = 'Unknown command'
-    return reply
+        sendMsg('Rien compris mon pote', userdata)
+        return 'Unknown command'
+    return 'Message processed'
 
 def writeData(elmnt, data, userdata):
     dataTree = ET.parse('users.xml')
@@ -65,6 +75,29 @@ def writeData(elmnt, data, userdata):
             break
     dataTree.write('users.xml')
     return
+
+def readData(elmnt, userdata):
+    dataTree = ET.parse('users.xml')
+    dataRoot = dataTree.getroot()
+    for element in dataRoot.findall('user'):
+        if element.get('phone') == userdata[2]:
+            return element.find(elmnt).text
+        break
+    else:
+        return False
+
+def freeSlot(itemlist):
+    #itemlist = []
+    #for items in storage.split(';'):
+    #    itemlist.append(items.split(',')) 
+    #print(itemlist)
+    for i in range(len(itemlist)):
+        #print(itemlist[i])
+        #print(itemlist[i][0])
+        if itemlist[i][0] == '0':
+            return i
+    else:
+        return False
 
 oldmsgdate = ''
 messageRoot = ET.fromstring(subprocess.check_output("./hilink.sh get_sms", shell=True))
@@ -80,6 +113,6 @@ if (msgdate != oldmsgdate):
         print(reply)
     elif not userdata and msgcontent in ('Yo Rad!', 'Yo Rad !'):
         userdata = registerUser(sender)
-        sendMsg('Tu peux t enregistrer en envoyant : rg ton_nom', userdata, sender)
+        sendMsg('Tu peux t enregistrer en envoyant : Nom ton_nom (ex : Nom Rad)', userdata, sender)
     elif not userdata:
         print('Unknown user')
