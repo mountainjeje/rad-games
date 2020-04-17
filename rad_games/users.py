@@ -8,7 +8,7 @@ def checkUser(sender):
     dataRoot = dataTree.getroot()
 
     for user in dataRoot.findall('user'):
-        if(sender == user.find('phone').text):
+        if user.get('phone') == sender:
             userdata.append(user.find('name').text)
             userdata.append(user.find('level').text)
             userdata.append(sender)
@@ -51,53 +51,61 @@ def processMsg(msgcontent, userdata):
         writeData('name', msgcontent.split()[1], userdata)
         sendMsg('Tu es enregistre en tant que : ' + msgcontent.split()[1], userdata)
     elif msgcontent.split()[0] in ('prendre', 'Prendre') and len(msgcontent.split())>1:
-        writeData('game/inventory', msgcontent.split()[1], userdata)
-        sendMsg('L objet ' + msgcontent.split()[1] + ' est dans l inventaire', userdata)
-    elif msgcontent.split()[0] in ('voir', 'Voir') and len(msgcontent.split())>1:
-        if msgcontent.split()[1] in ('inventaire', 'Inventaire'):
-            itemlist = []
-            for items in readData('game/inventory', userdata).split(';'):
-                itemlist.append(items.split(',')) 
-            sendMsg('Inventaire : ' + str(itemlist), userdata)
-            print(itemlist)
+        freeslot = freeSpace('game/inventory/slot', userdata)
+        print(freeslot)
+        #if freeslot:
+        #    writeData('game/inventory/slot' + str(freeslot), msgcontent.split()[1], userdata)
+        #    sendMsg('L objet ' + msgcontent.split()[1] + ' est dans l inventaire', userdata)
+        #else:
+            #sendMsg('Inventaire plein!', userdata)
+    #elif msgcontent.split()[0] in ('voir', 'Voir') and len(msgcontent.split())>1:
+        #if msgcontent.split()[1] in ('inventaire', 'Inventaire'):
+            #itemlist = strToList(readData('game/inventory', userdata).split(';'))
+            #sendMsg('Inventaire : ' + str(itemlist), userdata)
+            #print(itemlist)
     else:
         sendMsg('Rien compris mon pote', userdata)
         return 'Unknown command'
     return 'Message processed'
 
-def writeData(elmnt, data, userdata):
+def writeData(element, data, userdata):
     dataTree = ET.parse('users.xml')
     dataRoot = dataTree.getroot()
-    for element in dataRoot.findall('user'):
-        if(userdata[2] == element.find('phone').text):
-            subelement = element.find(elmnt)
-            subelement.text = data
+    for user in dataRoot.findall('user'):
+        if user.get('phone') == userdata[2]:
+            user.find(element).text = data
             break
     dataTree.write('users.xml')
     return
 
-def readData(elmnt, userdata):
+def readData(element, userdata):
     dataTree = ET.parse('users.xml')
     dataRoot = dataTree.getroot()
-    for element in dataRoot.findall('user'):
-        if element.get('phone') == userdata[2]:
-            return element.find(elmnt).text
-        break
+    for user in dataRoot.findall('user'):
+        if user.get('phone') == userdata[2]:
+            return user.find(element).text
     else:
         return False
 
-def freeSlot(itemlist):
-    #itemlist = []
-    #for items in storage.split(';'):
-    #    itemlist.append(items.split(',')) 
-    #print(itemlist)
-    for i in range(len(itemlist)):
-        #print(itemlist[i])
-        #print(itemlist[i][0])
-        if itemlist[i][0] == '0':
-            return i
+def freeSpace(element, userdata):
+    i=0
+    dataTree = ET.parse('users.xml')
+    dataRoot = dataTree.getroot()
+    for user in dataRoot.findall('user'):
+        if user.get('phone') == userdata[2]:
+            for slot in user.findall(element):
+                if not slot.text:
+                    return i
+                i=i+1
+            return False
     else:
         return False
+
+def strToList(string):
+    itemlist = []
+    for items in readData('game/inventory', userdata).split(';'):
+        itemlist.append(items.split(',')) 
+    return itemlist
 
 oldmsgdate = ''
 messageRoot = ET.fromstring(subprocess.check_output("./hilink.sh get_sms", shell=True))
@@ -114,5 +122,5 @@ if (msgdate != oldmsgdate):
     elif not userdata and msgcontent in ('Yo Rad!', 'Yo Rad !'):
         userdata = registerUser(sender)
         sendMsg('Tu peux t enregistrer en envoyant : Nom ton_nom (ex : Nom Rad)', userdata, sender)
-    elif not userdata:
+    else:
         print('Unknown user')
